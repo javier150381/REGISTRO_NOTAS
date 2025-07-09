@@ -12,18 +12,18 @@ class NotasDB:
         cursor = self.conn.cursor()
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS notas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id INTEGER PRIMARY KEY,
                     nombre TEXT NOT NULL,
                     nota REAL NOT NULL
                 )"""
         )
         self.conn.commit()
 
-    def insertar_nota(self, nombre, nota):
+    def insertar_nota(self, nota_id, nombre, nota):
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT INTO notas (nombre, nota) VALUES (?, ?)",
-            (nombre, nota),
+            "INSERT INTO notas (id, nombre, nota) VALUES (?, ?, ?)",
+            (nota_id, nombre, nota),
         )
         self.conn.commit()
 
@@ -51,8 +51,8 @@ class NotasController:
     def __init__(self, modelo: NotasDB):
         self.modelo = modelo
 
-    def registrar(self, nombre: str, nota: float) -> str:
-        self.modelo.insertar_nota(nombre, nota)
+    def registrar(self, nota_id: int, nombre: str, nota: float) -> str:
+        self.modelo.insertar_nota(nota_id, nombre, nota)
         return f"Nota para {nombre} registrada correctamente."
 
     def listar(self):
@@ -76,15 +76,16 @@ class NotasView:
         with gr.Blocks() as demo:
             with gr.Tabs():
                 with gr.Tab("Crear"):
+                    nota_id_c = gr.Number(label="ID del Estudiante", precision=0)
                     nombre = gr.Textbox(label="Nombre del Estudiante")
                     nota = gr.Number(label="Nota Final")
                     salida = gr.Textbox(label="Mensaje", interactive=False)
 
-                    def manejar(nombre, nota):
-                        return self.controlador.registrar(nombre, nota)
+                    def manejar(nota_id_c, nombre, nota):
+                        return self.controlador.registrar(int(nota_id_c), nombre, nota)
 
                     boton = gr.Button("Guardar Nota")
-                    boton.click(manejar, inputs=[nombre, nota], outputs=salida)
+                    boton.click(manejar, inputs=[nota_id_c, nombre, nota], outputs=salida)
 
                 with gr.Tab("Leer"):
                     tabla = gr.Dataframe(
