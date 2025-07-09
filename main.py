@@ -21,7 +21,28 @@ class NotasDB:
 
     def insertar_nota(self, nombre, nota):
         cursor = self.conn.cursor()
-        cursor.execute("INSERT INTO notas (nombre, nota) VALUES (?, ?)", (nombre, nota))
+        cursor.execute(
+            "INSERT INTO notas (nombre, nota) VALUES (?, ?)",
+            (nombre, nota),
+        )
+        self.conn.commit()
+
+    def obtener_notas(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id, nombre, nota FROM notas")
+        return cursor.fetchall()
+
+    def actualizar_nota(self, nota_id, nombre, nota):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "UPDATE notas SET nombre = ?, nota = ? WHERE id = ?",
+            (nombre, nota, nota_id),
+        )
+        self.conn.commit()
+
+    def eliminar_nota(self, nota_id):
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM notas WHERE id = ?", (nota_id,))
         self.conn.commit()
 
 
@@ -34,6 +55,17 @@ class NotasController:
         self.modelo.insertar_nota(nombre, nota)
         return f"Nota para {nombre} registrada correctamente."
 
+    def listar(self):
+        return self.modelo.obtener_notas()
+
+    def actualizar(self, nota_id: int, nombre: str, nota: float) -> str:
+        self.modelo.actualizar_nota(nota_id, nombre, nota)
+        return "Nota actualizada correctamente."
+
+    def eliminar(self, nota_id: int) -> str:
+        self.modelo.eliminar_nota(nota_id)
+        return "Nota eliminada correctamente."
+
 
 # Vista
 class NotasView:
@@ -42,15 +74,55 @@ class NotasView:
 
     def interfaz(self):
         with gr.Blocks() as demo:
-            nombre = gr.Textbox(label="Nombre del Estudiante")
-            nota = gr.Number(label="Nota Final")
-            salida = gr.Textbox(label="Mensaje", interactive=False)
+            with gr.Tabs():
+                with gr.Tab("Crear"):
+                    nombre = gr.Textbox(label="Nombre del Estudiante")
+                    nota = gr.Number(label="Nota Final")
+                    salida = gr.Textbox(label="Mensaje", interactive=False)
 
-            def manejar(nombre, nota):
-                return self.controlador.registrar(nombre, nota)
+                    def manejar(nombre, nota):
+                        return self.controlador.registrar(nombre, nota)
 
-            boton = gr.Button("Guardar Nota")
-            boton.click(manejar, inputs=[nombre, nota], outputs=salida)
+                    boton = gr.Button("Guardar Nota")
+                    boton.click(manejar, inputs=[nombre, nota], outputs=salida)
+
+                with gr.Tab("Leer"):
+                    tabla = gr.Dataframe(
+                        headers=["ID", "Nombre", "Nota"],
+                        interactive=False,
+                    )
+
+                    def cargar():
+                        return self.controlador.listar()
+
+                    boton_cargar = gr.Button("Cargar Notas")
+                    boton_cargar.click(cargar, outputs=tabla)
+
+                with gr.Tab("Actualizar"):
+                    nota_id = gr.Number(label="ID", precision=0)
+                    nombre_u = gr.Textbox(label="Nuevo Nombre")
+                    nota_u = gr.Number(label="Nueva Nota")
+                    salida_u = gr.Textbox(label="Mensaje", interactive=False)
+
+                    def manejar_actualizar(nota_id, nombre_u, nota_u):
+                        return self.controlador.actualizar(int(nota_id), nombre_u, nota_u)
+
+                    boton_u = gr.Button("Actualizar Nota")
+                    boton_u.click(
+                        manejar_actualizar,
+                        inputs=[nota_id, nombre_u, nota_u],
+                        outputs=salida_u,
+                    )
+
+                with gr.Tab("Eliminar"):
+                    nota_id_e = gr.Number(label="ID", precision=0)
+                    salida_e = gr.Textbox(label="Mensaje", interactive=False)
+
+                    def manejar_eliminar(nota_id_e):
+                        return self.controlador.eliminar(int(nota_id_e))
+
+                    boton_e = gr.Button("Eliminar Nota")
+                    boton_e.click(manejar_eliminar, inputs=nota_id_e, outputs=salida_e)
         return demo
 
 
