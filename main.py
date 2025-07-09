@@ -1,14 +1,19 @@
 import sqlite3
 import gradio as gr
 
+# Aplicación sencilla para gestionar notas de estudiantes usando SQLite y Gradio
+
 # Modelo
 class NotasDB:
+    """Maneja todas las operaciones de la base de datos"""
+
     def __init__(self, db_name="notas.db"):
-        # Allow connection to be used from Gradio's worker threads
+        # Permite que la conexión sea usada desde los hilos de trabajo de Gradio
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.crear_tabla()
 
     def crear_tabla(self):
+        """Crea la tabla inicial si no existe"""
         cursor = self.conn.cursor()
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS notas (
@@ -20,6 +25,7 @@ class NotasDB:
         self.conn.commit()
 
     def insertar_nota(self, nota_id, nombre, nota):
+        """Inserta una nota nueva en la base de datos"""
         cursor = self.conn.cursor()
         cursor.execute(
             "INSERT INTO notas (id, nombre, nota) VALUES (?, ?, ?)",
@@ -28,6 +34,7 @@ class NotasDB:
         self.conn.commit()
 
     def obtener_notas(self):
+        """Devuelve todas las notas almacenadas"""
         cursor = self.conn.cursor()
         cursor.execute("SELECT id, nombre, nota FROM notas")
         return cursor.fetchall()
@@ -42,6 +49,7 @@ class NotasDB:
         return cursor.fetchone()
 
     def actualizar_nota(self, nota_id, nombre, nota):
+        """Actualiza una nota existente"""
         cursor = self.conn.cursor()
         cursor.execute(
             "UPDATE notas SET nombre = ?, nota = ? WHERE id = ?",
@@ -50,6 +58,7 @@ class NotasDB:
         self.conn.commit()
 
     def eliminar_nota(self, nota_id):
+        """Elimina una nota por id"""
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM notas WHERE id = ?", (nota_id,))
         self.conn.commit()
@@ -57,14 +66,18 @@ class NotasDB:
 
 # Controlador
 class NotasController:
+    """Coordina las operaciones entre la vista y el modelo"""
+
     def __init__(self, modelo: NotasDB):
         self.modelo = modelo
 
     def registrar(self, nota_id: int, nombre: str, nota: float) -> str:
+        """Registra una nueva nota"""
         self.modelo.insertar_nota(nota_id, nombre, nota)
         return f"Nota para {nombre} registrada correctamente."
 
     def listar(self):
+        """Lista todas las notas"""
         return self.modelo.obtener_notas()
 
     def obtener(self, nota_id: int):
@@ -72,20 +85,25 @@ class NotasController:
         return self.modelo.obtener_nota(nota_id)
 
     def actualizar(self, nota_id: int, nombre: str, nota: float) -> str:
+        """Actualiza una nota existente"""
         self.modelo.actualizar_nota(nota_id, nombre, nota)
         return "Nota actualizada correctamente."
 
     def eliminar(self, nota_id: int) -> str:
+        """Elimina una nota por id"""
         self.modelo.eliminar_nota(nota_id)
         return "Nota eliminada correctamente."
 
 
 # Vista
 class NotasView:
+    """Define la interfaz de usuario con Gradio"""
+
     def __init__(self, controlador: NotasController):
         self.controlador = controlador
 
     def interfaz(self):
+        """Construye y devuelve la interfaz de Gradio"""
         with gr.Blocks() as demo:
             gr.Markdown("## Gestión de Notas de Estudiantes")
             with gr.Tabs():
@@ -158,6 +176,7 @@ class NotasView:
 
 
 if __name__ == "__main__":
+    # Punto de entrada de la aplicación
     modelo = NotasDB()
     controlador = NotasController(modelo)
     vista = NotasView(controlador)
