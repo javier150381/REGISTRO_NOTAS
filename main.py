@@ -32,6 +32,15 @@ class NotasDB:
         cursor.execute("SELECT id, nombre, nota FROM notas")
         return cursor.fetchall()
 
+    def obtener_nota(self, nota_id):
+        """Devuelve una nota concreta por id o None si no existe"""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT id, nombre, nota FROM notas WHERE id = ?",
+            (nota_id,),
+        )
+        return cursor.fetchone()
+
     def actualizar_nota(self, nota_id, nombre, nota):
         cursor = self.conn.cursor()
         cursor.execute(
@@ -58,6 +67,10 @@ class NotasController:
     def listar(self):
         return self.modelo.obtener_notas()
 
+    def obtener(self, nota_id: int):
+        """Obtiene una nota individual por id"""
+        return self.modelo.obtener_nota(nota_id)
+
     def actualizar(self, nota_id: int, nombre: str, nota: float) -> str:
         self.modelo.actualizar_nota(nota_id, nombre, nota)
         return "Nota actualizada correctamente."
@@ -74,6 +87,7 @@ class NotasView:
 
     def interfaz(self):
         with gr.Blocks() as demo:
+            gr.Markdown("## Gestión de Notas de Estudiantes")
             with gr.Tabs():
                 with gr.Tab("Crear"):
                     nota_id_c = gr.Number(label="ID del Estudiante", precision=0)
@@ -100,10 +114,26 @@ class NotasView:
                     boton_cargar.click(cargar, outputs=tabla)
 
                 with gr.Tab("Actualizar"):
-                    nota_id = gr.Number(label="ID", precision=0)
-                    nombre_u = gr.Textbox(label="Nuevo Nombre")
-                    nota_u = gr.Number(label="Nueva Nota")
+                    with gr.Row():
+                        nota_id = gr.Number(label="ID", precision=0)
+                        boton_buscar = gr.Button("Buscar")
+
+                    nombre_u = gr.Textbox(label="Nombre")
+                    nota_u = gr.Number(label="Nota")
                     salida_u = gr.Textbox(label="Mensaje", interactive=False)
+
+                    def buscar_datos(nota_id):
+                        datos = self.controlador.obtener(int(nota_id))
+                        if datos:
+                            _, nombre, nota = datos
+                            return nombre, nota, ""
+                        return "", None, "ID no encontrado"
+
+                    boton_buscar.click(
+                        buscar_datos,
+                        inputs=nota_id,
+                        outputs=[nombre_u, nota_u, salida_u],
+                    )
 
                     def manejar_actualizar(nota_id, nombre_u, nota_u):
                         return self.controlador.actualizar(int(nota_id), nombre_u, nota_u)
