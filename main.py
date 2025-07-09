@@ -4,7 +4,8 @@ import gradio as gr
 # Modelo
 class NotasDB:
     def __init__(self, db_name="notas.db"):
-        self.conn = sqlite3.connect(db_name)
+        # Allow connection to be used from Gradio's worker threads
+        self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.crear_tabla()
 
     def crear_tabla(self):
